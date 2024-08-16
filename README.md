@@ -1,4 +1,4 @@
-# bengal
+# email-verifier ++
 
 ## MakeFile
 
