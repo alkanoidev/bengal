@@ -1,8 +1,8 @@
 package main
 
 import (
+	"email-checker/internal/server"
 	"fmt"
-	"monstera/internal/server"
 )
 
 func main() {

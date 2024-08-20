@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"errors"
@@ -64,7 +64,7 @@ func initModel() model {
 	m.form = huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
-				Title("What’s your name?").
+				Title("Enter email:").
 				Value(&m.email).
 				Key("email").
 				Validate(func(str string) error {
