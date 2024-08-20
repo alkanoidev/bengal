@@ -1,7 +1,8 @@
 package cli
 
 import (
-	"errors"
+	"email-checker/internal/pkg"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -13,8 +14,9 @@ import (
 )
 
 type model struct {
-	email string
-	form  *huh.Form
+	email   string
+	loading bool
+	form    *huh.Form
 }
 
 func (m model) Init() tea.Cmd {
@@ -45,13 +47,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	s := ""
+	if m.loading {
+
+	}
+
 	switch m.form.State {
 	case huh.StateCompleted:
 		m.email = m.form.GetString("email")
-		s += m.email
+		emailData, err := pkg.CheckDomain(m.email)
+		if err != nil {
+			fmt.Println("Error: ", err)
+		}
+		out, err := json.Marshal(emailData)
+		if err != nil {
+			panic(err)
+		}
+		s += "\n" + string(out) + "\n"
+
 		return s
 	default:
-		header := "Tabby"
+		header := "Email Checker"
 		form := strings.TrimSuffix(m.form.View(), "\n\n")
 		footer := "\nPress q to quit.\n"
 		s = header + "\n" + form + "\n\n" + footer
@@ -68,9 +83,6 @@ func initModel() model {
 				Value(&m.email).
 				Key("email").
 				Validate(func(str string) error {
-					if str == "Frank" {
-						return errors.New("Sorry, we don’t serve customers named Frank.")
-					}
 					return nil
 				}),
 		).WithShowHelp(false),
