@@ -6,17 +6,21 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 )
 
 type model struct {
-	email   string
-	loading bool
-	form    *huh.Form
+	email    string
+	loading  bool
+	form     *huh.Form
+	spinner  spinner.Model
+	response pkg.EmailData
 }
 
 func (m model) Init() tea.Cmd {
@@ -24,17 +28,14 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
-
 	case tea.KeyMsg:
-
 		switch msg.String() {
-
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		}
 	}
-	var cmds []tea.Cmd
 
 	form, cmd := m.form.Update(msg)
 	if f, ok := form.(*huh.Form); ok {
@@ -42,28 +43,44 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	}
 
-	return m, tea.Batch(cmds...)
-}
-
-func (m model) View() string {
-	s := ""
 	if m.loading {
-
-	}
-
-	switch m.form.State {
-	case huh.StateCompleted:
+		// TODO: spinner not spinnin
+		time.Sleep(2 * time.Second)
 		m.email = m.form.GetString("email")
 		emailData, err := pkg.CheckDomain(m.email)
 		if err != nil {
 			fmt.Println("Error: ", err)
 		}
-		out, err := json.Marshal(emailData)
-		if err != nil {
-			panic(err)
-		}
-		s += "\n" + string(out) + "\n"
+		m.response = emailData
+		m.loading = false
+		return m, tea.Quit
+	}
 
+	switch m.form.State {
+	case huh.StateCompleted:
+		m.loading = true
+		return m, nil
+	}
+
+	return m, tea.Batch(cmds...)
+}
+
+func (m model) View() string {
+	s := ""
+	switch m.form.State {
+	case huh.StateCompleted:
+		if m.loading {
+			s += fmt.Sprintf("\n\n   %s Loading...\n\n", m.spinner.View())
+			return s
+		}
+		if m.response != (pkg.EmailData{}) {
+			out, err := json.Marshal(m.response)
+			if err != nil {
+				panic(err)
+			}
+			s += "\n" + string(out) + "\n"
+			return s
+		}
 		return s
 	default:
 		header := "Email Checker"
@@ -76,6 +93,11 @@ func (m model) View() string {
 
 func initModel() model {
 	m := model{}
+
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	m.spinner = s
+
 	m.form = huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -83,6 +105,7 @@ func initModel() model {
 				Value(&m.email).
 				Key("email").
 				Validate(func(str string) error {
+					// TODO: email regex with error messages
 					return nil
 				}),
 		).WithShowHelp(false),

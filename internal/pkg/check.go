@@ -1,18 +1,17 @@
 package pkg
 
 import (
-	"errors"
 	"net"
 	"strings"
 )
 
 type EmailData struct {
-	hasMX    bool
-	hasSPF   bool
-	hasDMARC bool
+	HasMX    bool
+	HasSPF   bool
+	HasDMARC bool
 
-	spfRecord   string
-	dmarcRecord string
+	SpfRecord   string
+	DmarcRecord string
 }
 
 func CheckDomain(domain string) (EmailData, error) {
@@ -23,17 +22,17 @@ func CheckDomain(domain string) (EmailData, error) {
 		return data, err
 	}
 	if len(mxRecords) > 0 {
-		data.hasMX = true
+		data.HasMX = true
 	}
 
 	txtRecords, err := net.LookupTXT(domain)
 	if err != nil {
-		return data, errors.New("Error: " + err.Error())
+		return data, err
 	}
 	for _, record := range txtRecords {
 		if strings.HasPrefix(record, "v=spf1") {
-			data.hasSPF = true
-			data.spfRecord = record
+			data.HasSPF = true
+			data.SpfRecord = record
 			break
 		}
 	}
@@ -44,8 +43,8 @@ func CheckDomain(domain string) (EmailData, error) {
 	}
 	for _, record := range dmarcRecords {
 		if strings.HasPrefix(record, "v=DMARC1") {
-			data.hasDMARC = true
-			data.dmarcRecord = record
+			data.HasDMARC = true
+			data.DmarcRecord = record
 			break
 		}
 	}
