@@ -26,7 +26,7 @@ type model struct {
 }
 
 func (m model) Init() tea.Cmd {
-	return m.form.Init()
+	return tea.Batch(m.form.Init(), m.spinner.Tick)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -51,6 +51,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.email = m.form.GetString("email")
 		emailData, err := pkg.CheckDomain(m.email)
 		if err != nil {
+			// TODO: show error
 			fmt.Println("Error: ", err)
 		}
 		m.response = emailData
@@ -58,10 +59,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	switch m.form.State {
-	case huh.StateCompleted:
+	if m.form.State == huh.StateCompleted {
 		m.loading = true
-		return m, nil
 	}
 
 	return m, tea.Batch(cmds...)
