@@ -2,15 +2,16 @@ package cli
 
 import (
 	"email-checker/internal/pkg"
-	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 )
@@ -21,6 +22,7 @@ type model struct {
 	form     *huh.Form
 	spinner  spinner.Model
 	response pkg.EmailData
+	table    table.Model
 }
 
 func (m model) Init() tea.Cmd {
@@ -74,11 +76,11 @@ func (m model) View() string {
 			return s
 		}
 		if m.response != (pkg.EmailData{}) {
-			out, err := json.Marshal(m.response)
-			if err != nil {
-				panic(err)
-			}
-			s += "\n" + string(out) + "\n"
+			m.table.SetRows([]table.Row{
+				{strconv.FormatBool(m.response.HasMX), m.response.SpfRecord, m.response.DmarcRecord},
+			})
+			s += "\n" + m.table.View()
+
 			return s
 		}
 		return s
@@ -110,6 +112,18 @@ func initModel() model {
 				}),
 		).WithShowHelp(false),
 	)
+
+	columns := []table.Column{
+		{Title: "MX", Width: 4},
+		{Title: "SPF", Width: 30},
+		{Title: "DMARC", Width: 30},
+	}
+
+	t := table.New(table.WithColumns(columns),
+		table.WithFocused(true),
+		table.WithHeight(7))
+	m.table = t
+
 	return m
 }
 
