@@ -25,13 +25,26 @@ type model struct {
 	table    table.Model
 }
 
+type UpdateEmailResultMsg struct {
+	EmailData pkg.EmailData
+	Err       error
+}
+
 func (m model) Init() tea.Cmd {
 	return tea.Batch(m.form.Init(), m.spinner.Tick)
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
+
 	switch msg := msg.(type) {
+	case UpdateEmailResultMsg:
+		if msg.Err != nil {
+			fmt.Println("Error: ", msg.Err)
+		}
+		m.response = msg.EmailData
+		m.loading = false
+		return m, tea.Quit
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
@@ -49,14 +62,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// TODO: spinner not spinnin
 		time.Sleep(2 * time.Second)
 		m.email = m.form.GetString("email")
-		emailData, err := pkg.CheckDomain(m.email)
-		if err != nil {
-			// TODO: show error
-			fmt.Println("Error: ", err)
-		}
-		m.response = emailData
-		m.loading = false
-		return m, tea.Quit
+		go func() tea.Msg {
+			emailData, err := pkg.CheckDomain(m.email)
+			if err != nil {
+				// TODO: show err
+				fmt.Println("Error: ", err)
+			}
+			return UpdateEmailResultMsg{EmailData: emailData, Err: err}
+		}()
+		return m, m.spinner.Tick
 	}
 
 	if m.form.State == huh.StateCompleted {
