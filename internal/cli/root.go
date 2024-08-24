@@ -6,7 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -60,7 +59,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	if m.loading {
 		// TODO: spinner not spinnin
-		time.Sleep(2 * time.Second)
 		m.email = m.form.GetString("email")
 		go func() tea.Msg {
 			emailData, err := pkg.CheckDomain(m.email)
@@ -82,28 +80,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	s := ""
+	if m.response != (pkg.EmailData{}) {
+		m.table.SetRows([]table.Row{
+			{strconv.FormatBool(m.response.HasMX), m.response.SpfRecord, m.response.DmarcRecord},
+		})
+		s += "\n" + m.table.View()
+	}
 	switch m.form.State {
 	case huh.StateCompleted:
 		if m.loading {
 			s += fmt.Sprintf("\n\n   %s Loading...\n\n", m.spinner.View())
-			return s
 		}
-		if m.response != (pkg.EmailData{}) {
-			m.table.SetRows([]table.Row{
-				{strconv.FormatBool(m.response.HasMX), m.response.SpfRecord, m.response.DmarcRecord},
-			})
-			s += "\n" + m.table.View()
-
-			return s
-		}
-		return s
 	default:
 		header := "Email Checker"
 		form := strings.TrimSuffix(m.form.View(), "\n\n")
 		footer := "\nPress q to quit.\n"
 		s = header + "\n" + form + "\n\n" + footer
-		return s
 	}
+	return s
 }
 
 func initModel() model {
